@@ -56,12 +56,13 @@ int read_program(char * path) { // 프로그램 파일 경로
     // fill_frame()   <---- 어떻게 불러올지 관건
 
     check_all_matched(page_manager);
-    if (page_manager->is_memory_loaded == 0) {
-        enqueue 한다.
+    if (page_manager->is_memory_loaded == 1) {
+       프로세서 pool에 넣는다.
     }
 
     else { // memory load가 됐을 경우
-        프로세서 pool에 넣는다.
+        //enqueue한다
+        return;
     }
 
     fclose(fp);
