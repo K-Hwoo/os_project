@@ -11,7 +11,8 @@
 typedef struct { // page struct
     unsigned int data[PAGE_SIZE];
     int page_number;
-    int matched_frame; //page_table만들때 frame과 matching이 되었는가?
+    int matched_frame; // 각 page와 frame matching된 값
+    int is_matched_frame; // 각 page와 frame matching 여부 판단
     size_t first_address; //page first address
 } Page;
 
@@ -33,7 +34,7 @@ PageManager* create_page_manager(int total_page_size) { // create page manager, 
     }
     for (int i = 0; i < total_page_size; i++) {
         page_manager->pages[i].page_number = i;
-		page_manager->pages[i].matched_frame = -1;
+		page_manager->pages[i].is_matched_frame = -1;
     }
     page_manager->allocated_pages = total_page_size;
     page_manager->is_memory_loaded = 0; // not loaded
@@ -52,14 +53,23 @@ void show_total_page_status(PageManager* page_manager) {//전체 페이지
 }
 
 void show_page_status(PageManager* page_manager, int page_num){//페이지 한 개
-    printf("page_number           matched_frame          first_address\n");
-    printf("      %d                     %d                     %ld\n", page_manager->pages[page_num].page_number, page_manager->pages[page_num].matched_frame, page_manager->pages[page_num].first_address);
+    printf("page_number           is_matched_frame          first_address\n");
+    printf("      %d                     %d                     %ld\n", page_manager->pages[page_num].page_number, page_manager->pages[page_num].is_matched_frame, page_manager->pages[page_num].first_address);
 }
 
-void set_page_data(PageManager* page_manager, int i, int j, unsigned int byte) { ///? two for loop
-    if (i < page_manager->allocated_pages && j < PAGE_SIZE) {
-        page_manager->pages[i].data[j] = byte;
+// page하나당 is_matched_frame 1씩 증가
+// 따라서 전체 페이지 수와 is_matched_frame과 값이 다르면 memory load 안됨.
+void set_page_data(PageManager* page_manager, unsigned int *byte) { ///? two for loop
+    int k = 0;
+    for (int i = 0; i < page_manager->allocated_pages; i++) {
+        for (int j = 0; j < PAGE_SIZE / sizeof(int); j++) {
+            page_manager->pages[i].data[j] = byte[k];
+            k++;
+        }
+        page_manager->pages[i].is_matched_frame++; // 페이지별 프레임 매칭될 때 마다 증가
     }
+    // for문을 함수 밖에 놓으면 함수가 실행될 때마다 k값이 초기화돼서 안으로 옮겨주었습니다
+    // 그리고 unsigned int인 걸 고려해서 PAGE_SIZE / sizeof(int)만큼만 반복합니다
 }
 
 unsigned int get_page_data(PageManager* page_manager, int page_num, int i){//밖에서for문으로 page_data받아오기(4kb돌면서)
@@ -75,23 +85,23 @@ void set_first_address(PageManager* page_manager, int page_num, size_t first_add
 }
 
 void set_matched_frame(PageManager* page_manager, int page_num){ //page table에 frame과 match되었음
-    page_manager->pages[page_num].matched_frame = 1;
+    page_manager->pages[page_num].is_matched_frame = 1;
 }
 
 int get_matched_frame(PageManager* page_manager, int page_num){//page table에 frame과 match되었는지 확인
-    return page_manager->pages[page_num].matched_frame;
+    return page_manager->pages[page_num].is_matched_frame;
 }
 
-int check_all_matched(PageManager* page_manager){ //이 manager가 관리하는 모든 page가 matched되었는지 확인
+int check_memory_loaded(PageManager* page_manager){ // Manager가 관리하는 page들 matching 여부 확인 및 변경
     int matched=0;
     for(int i = 0; i < page_manager->allocated_pages; i++){
-	    if(page_manager->pages[i].matched_frame == 1){
-		    matched++;
+	    if(page_manager->pages[i].is_matched_frame == 1){
+		    matched++; // matching 판단 기준 수정 필요
 		}
 	}
 	if(matched == page_manager->allocated_pages){
-	    return 1; //all_matched
 	    page_manager->is_memory_loaded = 1;
+	    return 1; //all_matched
 	}
 	else{
 	    return 0; // not matched

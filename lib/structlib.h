@@ -26,16 +26,15 @@ void remove_page_manager(PageManager* page_manager); // remove page manager
 void show_total_page_status(PageManager* page_manager); // 전체 페이지
 void show_page_status(PageManager* page_manager, int page_num); // 페이지 한 개
 
-void set_page_data(PageManager* page_manager, int i, int j, int byte); // for문으로 i, j loop 돌리기
+void set_page_data(PageManager* page_manager, unsigned int *byte); // for문으로 i, j loop 돌리기
 int get_page_data(PageManager* page_manager, int page_num, int i); // 밖에서for문으로 page_data받아오기(4096번 돌면서)
-void change_is_memory_loaded(PageManager* page_manager, int change); // check_all_matched되면 밖에서 program pool에 넣고, 이거 사용해서 1로 올림, 맨 아래랑 합칠까 말까(check_all_matched)
 
 size_t get_page_first_address(PageManager* page_manager, int get_page_number); // 원하는 page의 first address 가져오기
 void set_first_address(PageManager* page_manager, int page_num, size_t first_addr); // addr넣을때 맨 처음에 이것도 실행
 
 void set_matched_frame(PageManager* page_manager, int page_num); // page table에 frame과 match되었음
 int get_matched_frame(PageManager* page_manager, int page_num); // page table에 frame과 match되었는지 확인
-int check_all_matched(PageManager* page_manager); // 이 manager가 관리하는 모든 page가 matched되었는지 확인
+int check_all_matched(PageManager* page_manager); // Manager가 관리하는 page들 matching 여부 확인 및 변경
 
 
 // frame_struct.c 에 있는 구조체 및 함수들
