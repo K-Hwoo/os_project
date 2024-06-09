@@ -5,7 +5,7 @@
 typedef struct Process {
     PageManager* page_manager;
     struct Process* next;
-    int process_num;
+    char process_name[30];
 } Process;
 
 // 링크드 리스트 관리를 위한 구조체
@@ -19,12 +19,13 @@ void CreateProcessPool(){// 프로세스 풀 생성
 }
 
 // 링크드 리스트에 프로세스 추가
-void addProcess(ProcessPool* pool, PageManager* page_manager, int process_number) {
+void addProcess(ProcessPool* pool, PageManager* page_manager, char* name) {
     // 새로운 프로세스를 생성
     Process* newProcess = (Process*)malloc(sizeof(Process));
     newProcess->page_manager = page_manager;
     newProcess->next = NULL;
     newProcess->process_num = process_number;
+    strcpy(newProcess->process_name, name);
 
     // 리스트가 비어있다면 새로운 프로세스를 헤드로 지정
     if (pool->head == NULL) {
@@ -41,19 +42,19 @@ void addProcess(ProcessPool* pool, PageManager* page_manager, int process_number
 }
 
 // 링크드 리스트에서 특정 프로세스를 제거
-void removeProcess(ProcessPool* pool, int process_number) {
+void removeProcess(ProcessPool* pool, char* name) {
     Process* current = pool->head;
     Process* prev = NULL;
 
     // 헤드에서 시작하여 해당 Process number를 가진 프로세스 찾기
-    while (current != NULL && current->process_num != process_number) {
+    while (current != NULL && current->process_name != name) {
         prev = current;
         current = current->next;
     }
 
     // 특정 Process number를 가진 프로세스를 찾지 못한 경우
     if (current == NULL) {
-        printf("Process with Process %d not found.\n", process_number);
+        printf("Process not found.\n");
         return;
     }
 
@@ -67,14 +68,14 @@ void removeProcess(ProcessPool* pool, int process_number) {
         prev->next = current->next;
     }
     free(current);
-    printf("Process with Process %d removed.\n", process_number);
+    printf("Process %s is removed from pool.\n", name);
 }
 
 // 링크드 리스트에 있는 모든 프로세스 정보 출력
 void printProcesses(ProcessPool* pool) {
     Process* current = pool->head;
     while (current != NULL) {
-        printf("process_number: %d \n", current->process_num);
+        printf("process name: %s \n", current->process_name);
         current = current->next;
     }
 }
