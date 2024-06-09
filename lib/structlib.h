@@ -5,7 +5,6 @@
 #define TOTAL_FRAMES (TOTAL_MEMORY_SIZE / PAGE_SIZE) // 총 프레임 수
 
 // program_struct.c 에 있는 구조체들 및 함수들
-// program 주소 관리 page 구조체 및 함수들
 
 typedef struct { // page struct
     int data[PAGE_SIZE];
@@ -27,15 +26,17 @@ void show_total_page_status(PageManager* page_manager); // 전체 페이지
 void show_page_status(PageManager* page_manager, int page_num); // 페이지 한 개
 
 void set_page_data(PageManager* page_manager, unsigned int *byte); // for문으로 i, j loop 돌리기
-int get_page_data(PageManager* page_manager, int page_num, int i); // 밖에서for문으로 page_data받아오기(4096번 돌면서)
+unsigned int get_page_data(PageManager* page_manager, int page_num, int i); // 밖에서for문으로 page_data받아오기(4096번 돌면서)
 
 size_t get_page_first_address(PageManager* page_manager, int get_page_number); // 원하는 page의 first address 가져오기
 void set_first_address(PageManager* page_manager, int page_num, size_t first_addr); // addr넣을때 맨 처음에 이것도 실행
 
 void set_matched_frame(PageManager* page_manager, int page_num); // page table에 frame과 match되었음
 int get_matched_frame(PageManager* page_manager, int page_num); // page table에 frame과 match되었는지 확인
-int check_all_matched(PageManager* page_manager); // Manager가 관리하는 page들 matching 여부 확인 및 변경
+int check_memory_loaded(PageManager* page_manager); // Manager가 관리하는 page들 matching 여부 확인 및 변경
 
+void fill_frames(unsigned char *virtual_physical_memory, PageManager *page_manager, FrameList *fl, FrameManager *fm, unsigned int *byte);
+void show_pf_table(PageManager *page_manager, FrameManager *frame_manager);
 
 // frame_struct.c 에 있는 구조체 및 함수들
 

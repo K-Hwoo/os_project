@@ -2,9 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "system.h"
-
-#define PAGE_SIZE 4096 // 4KB 페이지 크기
-#define OFFSET_MASK 0xFFF // 12비트 오프셋 마스크
+#include "structlib.h"
 
 // program 주소 관리 page 구조체 및 함수들
 
@@ -95,17 +93,85 @@ int get_matched_frame(PageManager* page_manager, int page_num){//page table에 f
 int check_memory_loaded(PageManager* page_manager){ // Manager가 관리하는 page들 matching 여부 확인 및 변경
     int matched=0;
     for(int i = 0; i < page_manager->allocated_pages; i++){
-	    if(page_manager->pages[i].is_matched_frame == 1){
-		    matched++; // matching 판단 기준 수정 필요
+	    if(page_manager->pages[i].is_matched_frame == 1){ // set_page_data 함수와 연계
+		    matched++;
 		}
 	}
 	if(matched == page_manager->allocated_pages){
 	    page_manager->is_memory_loaded = 1;
-	    return 1; //all_matched
+	    return 1; // all_matched
 	}
 	else{
 	    return 0; // not matched
 	}
+}
+
+// page에 frame 주소 채우기. 총 5개의 인자 받아옴.
+void fill_frames(unsigned char *virtual_physical_memory, PageManager *page_manager, FrameList *fl, FrameManager *fm, unsigned int *byte) {
+
+    // 프로그램 읽어서 바이트를 pages[].data[]에 넣어줘야 됨
+    // 프로그램 읽어오는 함수로 Bytes 읽어오고 읽어온 값으로
+    // page 4096개 묶음으로 나누고 배열에 넣으면서 page # 부여
+
+    set_page_data(page_manager, byte); // execute.c로 옮기면 코드가 중복되므로 지우기
+
+    // count_empty_frames으로 fl에 frame 몇 개 남았나 확인하고
+    // page 개수보다 모자라면 return
+    if (count_empty_frames(fl) < TOTAL_FRAMES) {
+        printf("프레임 개수가 페이지보다 부족합니다.\n");
+        return;
+    }
+    // 안 모자라면 get_first_empty_frame 함수로 하나씩 가져와서 frame.frame_number 매칭
+    for (int i = 0; i < TOTAL_FRAMES; i++) {
+        // 각 페이지별 프레임 매칭
+        page_manager->pages[i].matched_frame = get_first_empty_frame(fl, fm).frame_number;
+        
+        // 각 페이지별 프레임 매칭 여부 설정
+        set_matched_frame(page_manager, i);
+    }
+    ////////////// 위까지 프레임 매칭 ////////////////////
+    
+    // 그리고 frame.first_address를 시작 주소로 두고
+    // virtual_memory + frame.first_address부터 4096번 for문 반복해서 data의 프로그램 주소 대입
+    // -> physical memory에 값 입력하는 과정. tmux 가운데 pane에 표시되는 주소 데이터값을 변경 시켜줌
+    unsigned char *addr_ptr;
+    
+    for (int j = 0; j < TOTAL_FRAMES; j++) {
+        int first_address = (int)get_first_empty_frame(fl, fm).first_address;
+        addr_ptr = virtual_physical_memory + first_address;
+        
+        for (int i = 0; i < PAGE_SIZE; i++) {
+            *(addr_ptr + i) = page_manager->pages[j].data[i];
+        }
+    }
+}
+
+// 페이지 테이블 생성자 (분할 화면에 띄우는 역할은 아직 X)
+void show_pf_table(PageManager *page_manager, FrameManager *frame_manager) {
+    if (page_manager == NULL) {
+        fprintf(stderr, "PageManager is NULL\n");
+        return;
+    }
+
+    // matching 여부 파악해서 matching 됐으면 페이지 테이블 출력
+    if (check_memory_loaded(page_manager) == 1) {
+        
+        printf("┌────────────┬────────────┐\n");
+        printf("│   Page #   │   Frame #  │\n");
+        printf("├────────────┼────────────┤\n");
+
+        for (int i = 0; i < page_manager->allocated_pages; i++) {
+            printf("│ %-10d │ %-10d │\n", 
+                    page_manager->pages[i].page_number,
+                    page_manager->pages[i].matched_frame
+                    );
+        }
+        printf("└────────────┴────────────┘\n");
+    }
+
+    else {
+        printf("페이지가 프레임과 매칭이 되지 않았습니다.\n");
+    }
 }
 
 /*

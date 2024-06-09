@@ -4,12 +4,11 @@
 #include "system.h"
 #include "structlib.h"
 
-#define TOTAL_MEMORY_SIZE 65536 // 64KB 전체 메모리 크기
-#define PAGE_SIZE 4096 // 4KB 페이지 크기
-#define OFFSET_MASK 0xFFF // 12비트 오프셋
-
-
 int read_program(char * path) { // 프로그램 파일 경로
+    void *virtual_physical_memory = make_dummy_physical_memory(); // in mem_allocate.c
+    FrameList *fl = create_empty_frames_list();
+    FrameManager *fm = create_frame_manager(virtual_physical_memory, fl);
+
     FILE *fp = fopen(path, "rb");
     if (fp == NULL) {
         perror("fopen");
@@ -53,16 +52,16 @@ int read_program(char * path) { // 프로그램 파일 경로
     PageManager *page_manager = create_page_manager(total_bytes / (PAGE_SIZE / sizeof(int)));
     set_page_data(page_manager, byte);
 
-    // fill_frame()   <---- 어떻게 불러올지 관건
+    // page에 frame 주소 채우기
+    fill_frames(virtual_physical_memory, page_manager, fl, fm, byte);
 
-    check_all_matched(page_manager);
-    if (page_manager->is_memory_loaded == 1) {
-       프로세서 pool에 넣는다.
+    check_memory_loaded(page_manager);
+    if (page_manager->is_memory_loaded == 0) {
+        enqueue 한다.
     }
 
     else { // memory load가 됐을 경우
-        //enqueue한다
-        return;
+        프로세서 pool에 넣는다.
     }
 
     fclose(fp);
@@ -85,8 +84,6 @@ int execute() {
         printf("디렉토리에 입력한 프로그램이 없습니다. \n");
         return 1;
     }
-
-    if ()
 
     return 0;
 }

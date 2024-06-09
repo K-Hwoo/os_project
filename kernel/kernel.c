@@ -10,25 +10,20 @@
 #include "print_util.h"
 #include "structlib.h"
 
-void fill_frames(unsigned char *virtual_physical_memory, PageManager *page_manager, FrameList *fl, FrameManager *fm, unsigned int *byte);
-
-// Page# & Frame# 표 생성자 (분할 화면에 띄우는 역할은 아직 X)
-void show_pf_table(PageManager *page_manager, FrameManager *frame_manager);
-
 int main() {
     system("clear");
     char * input;
 
     // 메모리 setting
-    void * virtual_physical_memory = make_dummy_physical_memory(); // in memory_allocate.c
+    void * virtual_physical_memory = make_dummy_physical_memory(); // in mem_allocate.c
 
     // ProgrogramManager * pm = create_program_manager( ...... );
     // ProgramPool
     // ProgramQueue
 
+    // 프레임 종합 관리
     FrameList * fl = create_empty_frames_list();
     FrameManager * fm = create_frame_manager(virtual_physical_memory, fl);
-    //
 
     // 필요할 때 사용하자
     // const char * tmux_session_name = "terminal";
@@ -41,7 +36,7 @@ int main() {
     print_minios("");
 
 
-    // // ==================================== 작업공간
+    // // ==================================== 테스트공간
     // // 프로그램 주소 읽어오는 test
     // unsigned int *test = execute();
     
@@ -52,11 +47,10 @@ int main() {
     // // =====================================
 
 
-
-
     sleep(1);
 
-    memory_view(virtual_physical_memory, 0, 25); // in memory_allocate.c
+    // 이것도 execute.c에 통합?
+    memory_view(virtual_physical_memory, 0, 25); // in mem_allocate.c
 
     while(1) {
         // readline을 사용하여 입력 받기
@@ -135,78 +129,6 @@ int main() {
     return 0;
 }
 
-// page에 frame 주소 채우기. 총 5개의 인자 받아옴. 많은 거 같기도..
-void fill_frames(unsigned char *virtual_physical_memory, PageManager *page_manager, FrameList *fl, FrameManager *fm, unsigned int *byte) {
-
-    // 프로그램 읽어서 바이트를 pages[].data[]에 넣어줘야 됨
-    // 프로그램 읽어오는 함수로 Bytes 읽어오고 읽어온 값으로
-    // page 4096개 묶음으로 나누고 배열에 넣으면서 page # 부여
-
-    set_page_data(page_manager, byte); // execute.c로 옮기면 코드가 중복되므로 지우기
-
-    // count_empty_frames으로 fl에 frame 몇 개 남았나 확인하고
-    // page 개수보다 모자라면 return
-    if (count_empty_frames(fl) < TOTAL_FRAMES) {
-        printf("프레임 개수가 페이지보다 부족합니다.\n");
-        return;
-    }
-    // 안 모자라면 get_first_empty_frame 함수로 하나씩 가져와서 frame.frame_number 매칭
-    for (int i = 0; i < TOTAL_FRAMES; i++) {
-        // 각 페이지별 프레임 매칭
-        page_manager->pages[i].matched_frame = get_first_empty_frame(fl, fm).frame_number;
-        
-        // 각 페이지별 프레임 매칭 여부 설정
-        set_matched_frame(page_manager, i);
-    }
-    ////////////// 위까지 프레임 매칭 ////////////////////
-    
-    // 그리고 frame.first_address를 시작 주소로 두고
-    // virtual_memory + frame.first_address부터 4096번 for문 반복해서 data의 프로그램 주소 대입
-    // physical memory에 값 입력하는 과정. tmux 가운데 pane에 표시되는 주소 데이터값을 변경 시켜줌
-    unsigned char *addr_ptr;
-    for (int j = 0; j < TOTAL_FRAMES; j++) {
-        for (int i = 0; i < PAGE_SIZE; i++) {
-            addr_ptr = virtual_physical_memory + get_first_empty_frame(fl, fm).first_address;
-            *addr_ptr = page_manager->pages[j].data[i];
-        }
-    }
-    
-
-
-
-    // 이 pages를 page_manager로 관리 ------------------------------
-
-}
-
-// 페이지 테이블 생성자 (분할 화면에 띄우는 역할은 아직 X)
-void show_pf_table(PageManager *page_manager, FrameManager *frame_manager) {
-    if (page_manager == NULL) {
-        fprintf(stderr, "PageManager is NULL\n");
-        return;
-    }
-
-    // matching 여부 파악해서 matching 됐으면 페이지 테이블 출력
-    if (check_all_matched(page_manager) == 1) {
-        
-        printf("┌────────────┬────────────┐\n");
-        printf("│   Page #   │   Frame #  │\n");
-        printf("├────────────┼────────────┤\n");
-
-        for (int i = 0; i < page_manager->allocated_pages; i++) {
-            printf("│ %-10d │ %-10d │\n", 
-                    page_manager->pages[i].page_number,
-                    page_manager->pages[i].matched_frame
-                    );
-        }
-        printf("└────────────┴────────────┘\n");
-    }
-
-    else {
-        printf("페이지가 프레임과 매칭이 되지 않았습니다.\n");
-    }
-}
-
-
 // page 출력 결과 테스트용
 void print_page(unsigned int *byte) {
     size_t elements_per_page = PAGE_SIZE / sizeof(unsigned int);
@@ -227,5 +149,3 @@ void print_page(unsigned int *byte) {
     }
     printf("\n");
 }
-
-// fill_frame 함수를 program_struct.c로 옮겨야 함.
