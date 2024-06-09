@@ -24,7 +24,6 @@ void addProcess(ProcessPool* pool, PageManager* page_manager, char* name) {
     Process* newProcess = (Process*)malloc(sizeof(Process));
     newProcess->page_manager = page_manager;
     newProcess->next = NULL;
-    newProcess->process_num = process_number;
     strcpy(newProcess->process_name, name);
 
     // 리스트가 비어있다면 새로운 프로세스를 헤드로 지정
@@ -46,19 +45,19 @@ void removeProcess(ProcessPool* pool, char* name) {
     Process* current = pool->head;
     Process* prev = NULL;
 
-    // 헤드에서 시작하여 해당 Process number를 가진 프로세스 찾기
+    // 헤드에서 시작하여 해당 Process name을 가진 프로세스 찾기
     while (current != NULL && current->process_name != name) {
         prev = current;
         current = current->next;
     }
 
-    // 특정 Process number를 가진 프로세스를 찾지 못한 경우
+    // 특정 Process name을 가진 프로세스를 찾지 못한 경우
     if (current == NULL) {
         printf("Process not found.\n");
         return;
     }
 
-    // 특정 Process number를 가진 프로세스를 찾은 경우
+    // 특정 Process name을 가진 프로세스를 찾은 경우
     // 이전 노드와 다음 노드를 연결하고 해당 노드 메모리 해제
     if (prev == NULL) {
         // 삭제할 노드가 헤드인 경우
