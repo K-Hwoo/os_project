@@ -49,7 +49,6 @@ int main() {
 
     sleep(1);
 
-    // 이것도 execute.c에 통합?
     memory_view(virtual_physical_memory, 0, 25); // in mem_allocate.c
 
     while(1) {
@@ -99,7 +98,7 @@ int main() {
         }
 
         else if (strcmp(input, "execute") == 0) {
-            execute();
+            read_program(virtual_physical_memory, fl, fm);
         }
 
         else if (strcmp(input, "terminate") == 0) {

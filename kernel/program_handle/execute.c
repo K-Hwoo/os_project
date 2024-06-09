@@ -4,10 +4,23 @@
 #include "system.h"
 #include "structlib.h"
 
-int read_program(char * path) { // 프로그램 파일 경로
-    void *virtual_physical_memory = make_dummy_physical_memory(); // in mem_allocate.c
-    FrameList *fl = create_empty_frames_list();
-    FrameManager *fm = create_frame_manager(virtual_physical_memory, fl);
+int read_program(void *virtual_physical_memory, FrameList *fl, FrameManager *fm) { // 프로그램 파일 경로
+
+    char path[30]; // 프로그램 이름을 저장할 배열
+    char full_path[40];
+
+    printf("실행할 프로그램을 입력하세요 : ");
+    scanf("%s", path); // 사용자로부터 파일 경로를 입력 받음
+
+    strcpy(full_path, "program/");
+    strcat(full_path, path);
+
+    // read_program 함수로 프로그램 주소 저장
+    unsigned int *result = read_program(full_path);
+    if (result != 0) {
+        printf("디렉토리에 입력한 프로그램이 없습니다. \n");
+        return 1;
+    }
 
     FILE *fp = fopen(path, "rb");
     if (fp == NULL) {
