@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "system.h"
-#include "structlib.h"
 
 // program 주소 관리 page 구조체 및 함수들
 
@@ -11,6 +10,7 @@ typedef struct { // page struct
     int page_number;
     int matched_frame; // 각 page와 frame matching된 값
     int is_matched_frame; // 각 page와 frame matching 여부 판단
+   	size_t first_address; //page first address
 } Page;
 
 typedef struct { // page manager struct
@@ -96,14 +96,12 @@ int check_memory_loaded(PageManager* page_manager){ // Manager가 관리하는 p
 	}
 }
 
-// page에 frame 주소 채우기. 총 5개의 인자 받아옴.
+// page에 frame 주소 채우기
 void fill_frames(unsigned char *virtual_physical_memory, PageManager *page_manager, FrameList *fl, FrameManager *fm, unsigned int *byte) {
 
     // 프로그램 읽어서 바이트를 pages[].data[]에 넣어줘야 됨
     // 프로그램 읽어오는 함수로 Bytes 읽어오고 읽어온 값으로
     // page 4096개 묶음으로 나누고 배열에 넣으면서 page # 부여
-
-    set_page_data(page_manager, byte); // execute.c로 옮기면 코드가 중복되므로 지우기
 
     // count_empty_frames으로 fl에 frame 몇 개 남았나 확인하고
     // page 개수보다 모자라면 return

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "system.h"
 
 // 프로세스 정보를 담는 구조체
 typedef struct Process {

@@ -102,11 +102,10 @@ Frame get_first_empty_frame(FrameList * empty_frames_list, FrameManager * fm) {
         Frame error;
         error.frame_number = -1;
         error.is_allocated = -1;
-        error.first_address = -1;
         printf("No empty frame ! \n");
         return error;
     }
-
+    printf("여기는?? - get_first_empty_frame()\n");
     FrameNode * first_node = empty_frames_list -> head;
     Frame first_frame = first_node -> frame;
 
@@ -190,4 +189,170 @@ void free_empty_frames_list(FrameList * empty_frames_list) {
         free(temp);
     }
     free(empty_frames_list);
+}
+
+
+
+typedef struct { // page struct
+    unsigned int data[PAGE_SIZE];
+    int page_number;
+    int matched_frame; // 각 page와 frame matching된 값
+    int is_matched_frame; // 각 page와 frame matching 여부 판단
+   	size_t first_address; //page first address
+} Page;
+
+typedef struct { // page manager struct
+    Page *pages; // dynamic allocation
+    int allocated_pages; // allocated pages
+    int is_memory_loaded; // is making page table finished?
+} PageManager;
+
+PageManager* create_page_manager(int total_page_size) { // create page manager, page data는 비어있는 것으로 생성
+    PageManager* page_manager = (PageManager*)malloc(sizeof(PageManager));
+    if (page_manager == NULL) { // error
+        return NULL;
+    }
+    
+    // sizeof(Page): 16408, 16개의 page가 들어갈 수 있는 동적 주소 할당
+    page_manager->pages = (Page*)malloc(total_page_size * sizeof(Page)); 
+
+    if (page_manager->pages == NULL) { // error
+        free(page_manager);
+        return NULL;
+    }
+    for (int i = 0; i < total_page_size; i++) {
+        page_manager->pages[i].page_number = i;
+		page_manager->pages[i].is_matched_frame = -1;
+    }
+    page_manager->allocated_pages = total_page_size;
+    page_manager->is_memory_loaded = 0; // not loaded
+
+    return page_manager;
+}
+
+void remove_page_manager(PageManager* page_manager) { // remove page manager
+    free(page_manager->pages); // free pages
+    free(page_manager); // free page manager
+}
+
+void show_total_page_status(PageManager* page_manager) {//전체 페이지
+    printf("number_of_pages    page_is_memory_loaded\n");
+    printf("      %d                       %d       \n", page_manager->allocated_pages, page_manager->is_memory_loaded);
+}
+
+void show_page_status(PageManager* page_manager, int page_num){//페이지 한 개
+    printf("page_number           is_matched_frame          first_address\n");
+    printf("      %d                     %d                     %ld\n", page_manager->pages[page_num].page_number, page_manager->pages[page_num].is_matched_frame, page_manager->pages[page_num].first_address);
+}
+
+// page하나당 is_matched_frame 1씩 증가
+// 따라서 전체 페이지 수와 is_matched_frame과 값이 다르면 memory load 안됨.
+void set_page_data(PageManager* page_manager, unsigned int *byte) { ///? two for loop
+    int k = 0;
+    for (int i = 0; i < page_manager->allocated_pages; i++) {
+        for (int j = 0; j < PAGE_SIZE / sizeof(int); j++) {
+            page_manager->pages[i].data[j] = byte[k];
+            k++;
+            if (page_manager->pages[i].data[j] != 0) 
+                printf("주소: %d, %d페이지, %d번째 - set_page_data()\n", page_manager->pages[i].data[j], i, j);
+        }
+        page_manager->pages[i].is_matched_frame++; // 페이지별 프레임 매칭될 때 마다 증가
+    }
+    printf("set_page_data() success\n");
+    // for문을 함수 밖에 놓으면 함수가 실행될 때마다 k값이 초기화돼서 안으로 옮겨주었습니다
+    // 그리고 unsigned int인 걸 고려해서 PAGE_SIZE / sizeof(int)만큼만 반복합니다
+}
+
+unsigned int get_page_data(PageManager* page_manager, int page_num, int i){//밖에서for문으로 page_data받아오기(4kb돌면서)
+    return page_manager->pages[page_num].data[i];
+}
+void set_matched_frame(PageManager* page_manager, int page_num){ //page table에 frame과 match되었음
+    page_manager->pages[page_num].is_matched_frame = 1;
+}
+
+int get_matched_frame(PageManager* page_manager, int page_num){//page table에 frame과 match되었는지 확인
+    return page_manager->pages[page_num].is_matched_frame;
+}
+
+int check_memory_loaded(PageManager* page_manager){ // Manager가 관리하는 page들 matching 여부 확인 및 변경
+    int matched=0;
+    for(int i = 0; i < page_manager->allocated_pages; i++){
+	    if(page_manager->pages[i].is_matched_frame == 1){ // set_page_data 함수와 연계
+		    matched++;
+		}
+	}
+	if(matched == page_manager->allocated_pages){
+	    page_manager->is_memory_loaded = 1;
+	    return 1; // all_matched
+	}
+	else{
+	    return 0; // not matched
+	}
+}
+
+// page에 frame 주소 채우기
+void fill_frames(unsigned char *virtual_physical_memory, PageManager *page_manager, FrameList *fl, FrameManager *fm, unsigned int *byte) {
+
+    // 프로그램 읽어서 바이트를 pages[].data[]에 넣어줘야 됨
+    // 프로그램 읽어오는 함수로 Bytes 읽어오고 읽어온 값으로
+    // page 4096개 묶음으로 나누고 배열에 넣으면서 page # 부여
+
+    // count_empty_frames으로 fl에 frame 몇 개 남았나 확인하고
+    // page 개수보다 모자라면 return
+    if (count_empty_frames(fl) < TOTAL_FRAMES) {
+        printf("프레임 개수가 페이지보다 부족합니다.\n");
+        return;
+    }
+    // 안 모자라면 get_first_empty_frame 함수로 하나씩 가져와서 frame.frame_number 매칭
+    for (int i = 0; i < TOTAL_FRAMES; i++) {
+        // 각 페이지별 프레임 매칭
+        page_manager->pages[i].matched_frame = get_first_empty_frame(fl, fm).frame_number;
+        
+        // 각 페이지별 프레임 매칭 여부 설정
+        set_matched_frame(page_manager, i);
+        printf("%d %d - fill_frames() 내 get_first_empty_frame()\n", page_manager->pages[i].matched_frame, i);
+    }
+    ////////////// 위까지 프레임 매칭 ////////////////////
+    printf("fill_frames() 절반 수행됨\n");
+    // 그리고 frame.first_address를 시작 주소로 두고
+    // virtual_memory + frame.first_address부터 4096번 for문 반복해서 data의 프로그램 주소 대입
+    // -> physical memory에 값 입력하는 과정. tmux 가운데 pane에 표시되는 주소 데이터값을 변경 시켜줌
+    unsigned char *addr_ptr;
+    
+    for (int j = 0; j < TOTAL_FRAMES; j++) {
+        int first_address = page_manager->pages[j].data[0];
+        addr_ptr = virtual_physical_memory + first_address;
+        
+        for (int i = 0; i < PAGE_SIZE; i++) {
+            *(addr_ptr + i) = page_manager->pages[j].data[i];
+        }
+    }
+}
+
+// 페이지 테이블 생성자 (분할 화면에 띄우는 역할은 아직 X)
+void show_pf_table(PageManager *page_manager, FrameManager *frame_manager) {
+    if (page_manager == NULL) {
+        fprintf(stderr, "PageManager is NULL\n");
+        return;
+    }
+
+    // matching 여부 파악해서 matching 됐으면 페이지 테이블 출력
+    if (check_memory_loaded(page_manager) == 1) {
+        
+        printf("┌────────────┬────────────┐\n");
+        printf("│   Page #   │   Frame #  │\n");
+        printf("├────────────┼────────────┤\n");
+
+        for (int i = 0; i < page_manager->allocated_pages; i++) {
+            printf("│ %-10d │ %-10d │\n", 
+                    page_manager->pages[i].page_number,
+                    page_manager->pages[i].matched_frame
+                    );
+        }
+        printf("└────────────┴────────────┘\n");
+    }
+
+    else {
+        printf("페이지가 프레임과 매칭이 되지 않았습니다.\n");
+    }
 }

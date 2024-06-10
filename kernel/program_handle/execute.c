@@ -2,9 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "system.h"
-#include "structlib.h"
 
-int read_program(void *virtual_physical_memory, FrameList *fl, FrameManager *fm) { // 프로그램 파일 경로
+int read_program(void *virtual_physical_memory, FrameList *fl, FrameManager *fm, PageManager *page_manager) { // 프로그램 파일 경로
 
     char path[30]; // 프로그램 이름을 저장할 배열
     char full_path[40];
@@ -15,15 +14,9 @@ int read_program(void *virtual_physical_memory, FrameList *fl, FrameManager *fm)
     strcpy(full_path, "program/");
     strcat(full_path, path);
 
-    // read_program 함수로 프로그램 주소 저장
-    unsigned int *result = read_program(full_path);
-    if (result != 0) {
-        printf("디렉토리에 입력한 프로그램이 없습니다. \n");
-        return 1;
-    }
-
-    FILE *fp = fopen(path, "rb");
+    FILE *fp = fopen(full_path, "rb");
     if (fp == NULL) {
+        printf("디렉토리에 입력한 프로그램이 없습니다. \n");
         perror("fopen");
         return 1;
     }
@@ -32,7 +25,7 @@ int read_program(void *virtual_physical_memory, FrameList *fl, FrameManager *fm)
     if (byte == NULL) {
         perror("malloc");
         fclose(fp);
-        return NULL;
+        return 1;
     }
     
     int total_bytes = 0;
@@ -58,24 +51,29 @@ int read_program(void *virtual_physical_memory, FrameList *fl, FrameManager *fm)
         }
         i = 0;
     }
-
+    else {
+        while (i < TOTAL_MEMORY_SIZE && (byte[i] = fgetc(fp)) != EOF) {
+            total_bytes++;
+            i++;
+        }
+    }
     printf("\nTotal bytes read: %d\n", total_bytes);
 
-    // page manager 생성 후 data에 프로그램 주소 할당
-    PageManager *page_manager = create_page_manager(total_bytes / (PAGE_SIZE / sizeof(int)));
+    // // page manager 생성 후 data에 프로그램 주소 할당
+    // PageManager *page_manager = create_page_manager(total_bytes / PAGE_SIZE);
     set_page_data(page_manager, byte);
-
+    printf("fill_frames 들어가기 전까지 완료\n");
     // page에 frame 주소 채우기
     fill_frames(virtual_physical_memory, page_manager, fl, fm, byte);
 
-    check_memory_loaded(page_manager);
-    if (page_manager->is_memory_loaded == 0) {
-        enqueue 한다.
-    }
+    // check_memory_loaded(page_manager);
+    // if (page_manager->is_memory_loaded == 0) {
+    //     enqueue 한다.
+    // }
 
-    else { // memory load가 됐을 경우
-        프로세서 pool에 넣는다.
-    }
+    // else { // memory load가 됐을 경우
+    //     프로세서 pool에 넣는다.
+    // }
 
     fclose(fp);
     return 0;
@@ -91,12 +89,12 @@ int execute() {
     strcpy(full_path, "program/");
     strcat(full_path, path);
 
-    // read_program 함수로 프로그램 주소 저장
-    unsigned int *result = read_program(full_path);
-    if (result != 0) {
-        printf("디렉토리에 입력한 프로그램이 없습니다. \n");
-        return 1;
-    }
+    // // read_program 함수로 프로그램 주소 저장
+    // unsigned int *result = read_program(full_path);
+    // if (result != 0) {
+    //     printf("디렉토리에 입력한 프로그램이 없습니다. \n");
+    //     return 1;
+    // }
 
     return 0;
 }

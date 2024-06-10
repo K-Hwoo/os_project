@@ -8,7 +8,6 @@
 
 #include "system.h"
 #include "print_util.h"
-#include "structlib.h"
 
 int main() {
     system("clear");
@@ -24,6 +23,9 @@ int main() {
     // 프레임 종합 관리
     FrameList * fl = create_empty_frames_list();
     FrameManager * fm = create_frame_manager(virtual_physical_memory, fl);
+
+    // page manager 생성 후 data에 프로그램 주소 할당
+    PageManager *page_manager = create_page_manager(TOTAL_FRAMES);
 
     // 필요할 때 사용하자
     // const char * tmux_session_name = "terminal";
@@ -94,11 +96,11 @@ int main() {
         }
 
         else if (strcmp(input, "show_pt") == 0) {
-
+            show_pf_table(page_manager, fm);
         }
 
         else if (strcmp(input, "execute") == 0) {
-            read_program(virtual_physical_memory, fl, fm);
+            read_program(virtual_physical_memory, fl, fm, page_manager);
         }
 
         else if (strcmp(input, "terminate") == 0) {
@@ -148,3 +150,24 @@ void print_page(unsigned int *byte) {
     }
     printf("\n");
 }
+
+// 문제: system.h에 structlib.h를 include하지 않고 Frame 구조체 가져오기.
+//      read_program의 입력 인자들을 변경했는데, execute 함수에서 어떻게 그 인자들(vpm, fl, 등)을 가져올지.
+
+// 2차 문제: 위 문제를 system.h에 structlib.h를 include하고
+//          frame과 page등의 정의들을 한 곳으로 모아서 헤더파일 참조 안 해도되게 대충 해결한 뒤 실행하니
+//          execute.c에서 fill_frames 내부에서 "No Empty Frame ! "을 16번 출력함.
+//          각 페이지별 프레임 매칭하는 부분의 오류.
+//
+//          kernel.c에서 fm과 fl 만드는 부분에서 문제가 있는 건 아닌 거 같은데,
+//          아마 page_manager가 서로 달라서 그런 게 아닐까? 왜냐면 execute는 page_manager를 안 받음.
+//          -> 같게 만들어도 똑같다.
+//
+//          first_address 지운 거 때문이었음.
+//          이거 해결하니까 이제 segmentation fault가 나타남 하ㅏ
+//
+//          fill_frames 내부에 문제가 있음. 확인하기
+
+//          24.06.10 / 18:00
+//          알고보니 set_page_data에서 메모리 잘못 참조하는 거였음.
+//          그러나 해결방법을 몰라서 현재 알아보는 중

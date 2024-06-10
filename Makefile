@@ -12,12 +12,12 @@ TARGET2=minios
 
 # Source, Object files
 SRCS=kernel/kernel.c \
-     kernel/system.c \
-	 kernel/mem_s/mem_allocate.c \
-	 kernel/mem_s/dummy_memory_management.c \
-	 kernel/program_handle/execute.c \
-	 lib/print_util.c \
-	 lib/frame_struct.c\
+	kernel/system.c \
+	kernel/mem_s/mem_allocate.c \
+	kernel/mem_s/dummy_memory_management.c \
+	kernel/program_handle/execute.c \
+	lib/print_util.c \
+	lib/frame_struct.c \
 	  
 OBJS=$(SRCS:.c=.o)
 
